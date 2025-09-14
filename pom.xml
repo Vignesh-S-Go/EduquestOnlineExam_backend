@@ -11,6 +11,7 @@
 	<groupId>com.vip</groupId>
 	<artifactId>ProVig</artifactId>
 	<version>0.0.1-SNAPSHOT</version>
+	<packaging>war</packaging> <!-- Changed packaging to war -->
 	<name>ProVig</name>
 	<description>Connection for Project</description>
 	<url/>
@@ -38,7 +39,12 @@
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-web</artifactId>
 		</dependency>
-
+		<!-- Mark the embedded server as provided -->
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-tomcat</artifactId>
+			<scope>provided</scope>
+		</dependency>
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-devtools</artifactId>
@@ -83,6 +89,7 @@
 	</dependencies>
 
 	<build>
+		<finalName>springapp1</finalName> <!-- Set the final name of the WAR -->
 		<plugins>
 			<plugin>
 				<groupId>org.springframework.boot</groupId>
