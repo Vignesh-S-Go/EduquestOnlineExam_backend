@@ -89,7 +89,7 @@
 	</dependencies>
 
 	<build>
-		<finalName>springapp1</finalName> <!-- Set the final name of the WAR -->
+		<finalName>springapp1.war</finalName> <!-- Set the final name of the WAR -->
 		<plugins>
 			<plugin>
 				<groupId>org.springframework.boot</groupId>
