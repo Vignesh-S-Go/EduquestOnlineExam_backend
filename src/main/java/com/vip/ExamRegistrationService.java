@@ -46,8 +46,10 @@ public class ExamRegistrationService {
         return null;
     }
     
-    public ExamRegistration completeExam(Long registrationId, Double score) {
-        Optional<ExamRegistration> optionalRegistration = examRegistrationRepository.findById(registrationId);
+    public ExamRegistration completeExam(Long registrationId, Double score, User user) {
+        // Use the new repository method to find the registration for the specific user
+        Optional<ExamRegistration> optionalRegistration = examRegistrationRepository.findByIdAndUser(registrationId, user);
+        
         if (optionalRegistration.isPresent()) {
             ExamRegistration registration = optionalRegistration.get();
             registration.setStatus("Completed");
@@ -55,6 +57,7 @@ public class ExamRegistrationService {
             registration.setCompletionDate(LocalDateTime.now());
             return examRegistrationRepository.save(registration);
         }
+        // If no registration is found for that ID and User, return null
         return null;
     }
 }

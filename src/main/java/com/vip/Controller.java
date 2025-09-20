@@ -71,6 +71,35 @@ public class Controller {
             return ResponseEntity.status(500).body("Error: " + e.getMessage());
         }
     }
+ // 2. Update the createPayment endpoint to use the new field
+    @PostMapping("/payments/create")
+    public ResponseEntity<?> createPayment(
+        @RequestBody PaymentRequest paymentRequest, 
+        @RequestHeader("Authorization") String authHeader) {
+        
+        try {
+            User user = getUserFromToken(authHeader);
+            if (user == null) {
+                return ResponseEntity.status(401).body("Invalid or expired token");
+            }
+            
+            Payment payment = paymentService.createPayment(
+                user, 
+                paymentRequest.getExamId(), 
+                paymentRequest.getAmount(),
+                paymentRequest.getPaymentMethod() // <-- PASS THE NEW FIELD HERE
+            );
+            
+            if (payment != null) {
+                paymentService.updatePaymentStatus(payment.getId(), "Paid");
+                return ResponseEntity.ok(payment);
+            } else {
+                return ResponseEntity.status(400).body("Failed to create payment");
+            }
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body("Error: " + e.getMessage());
+        }
+    }
     
     // ==================== DASHBOARD ENDPOINTS ====================
     
@@ -109,6 +138,7 @@ public class Controller {
         }
     }
     
+
     @GetMapping("/exams/registered")
     public ResponseEntity<?> getUserRegisteredExams(@RequestHeader("Authorization") String authHeader) {
         try {
@@ -118,6 +148,9 @@ public class Controller {
             }
             
             List<ExamRegistration> registrations = examRegistrationService.getUserRegistrations(user);
+            
+            // --- THIS IS THE FIX ---
+            // Pass the score from the registration object to the response object
             List<UserExamResponse> userExams = registrations.stream().map(reg -> 
                 new UserExamResponse(
                     reg.getExam().getId(),
@@ -126,11 +159,13 @@ public class Controller {
                     reg.getExam().getExamDate().format(DateTimeFormatter.ofPattern("yyyy-MM-dd")),
                     reg.getExam().getDuration(),
                     reg.getStatus(),
-                    reg.getId()
+                    reg.getId(),
+                    reg.getScore() // <-- PASS THE SCORE HERE
                 )
             ).collect(Collectors.toList());
             
             return ResponseEntity.ok(userExams);
+
         } catch (Exception e) {
             return ResponseEntity.status(500).body("Error: " + e.getMessage());
         }
@@ -176,6 +211,8 @@ public class Controller {
     
     // ==================== PAYMENT ENDPOINTS ====================
     
+ // In your Controller.java file
+
     @GetMapping("/payments")
     public ResponseEntity<?> getUserPayments(@RequestHeader("Authorization") String authHeader) {
         try {
@@ -185,7 +222,17 @@ public class Controller {
             }
             
             List<Payment> payments = paymentService.getUserPayments(user);
-            return ResponseEntity.ok(payments);
+            List<PaymentResponse> paymentResponses = payments.stream().map(payment -> 
+                new PaymentResponse(
+                    payment.getUser().getName(), // Get the name from the User object
+                    payment.getAmount(),
+                    payment.getPaymentDate().format(DateTimeFormatter.ofPattern("yyyy-MM-dd")), // Format the date
+                    payment.getStatus()
+                )
+            ).collect(Collectors.toList());
+            
+            return ResponseEntity.ok(paymentResponses); // Return the transformed list
+
         } catch (Exception e) {
             return ResponseEntity.status(500).body("Error: " + e.getMessage());
         }
@@ -286,7 +333,31 @@ public class Controller {
         
         return userService.getUserByEmail(email);
     }
-    
+ // In Controller.java
+
+ // Find your existing completeExam endpoint and update it like this:
+	 @PostMapping("/exams/complete/{registrationId}")
+	 public ResponseEntity<?> completeExam(
+	     @PathVariable Long registrationId, 
+	     @RequestBody Map<String, Double> payload,
+	     @RequestHeader("Authorization") String authHeader) {
+	     
+	     User user = getUserFromToken(authHeader);
+	     if (user == null) {
+	         return ResponseEntity.status(401).body("Invalid token");
+	     }
+	
+	     Double score = payload.get("score");
+	     // Pass the user object to the service method
+	     ExamRegistration registration = examRegistrationService.completeExam(registrationId, score, user);
+	     
+	     if (registration != null) {
+	         return ResponseEntity.ok(new SuccessResponse("Exam completed successfully"));
+	     } else {
+	         // This will now correctly return an error if the user doesn't own the registration
+	         return ResponseEntity.status(400).body("Failed to complete exam. Registration not found for this user.");
+	     }
+	 }
     // ==================== RESPONSE CLASSES ====================
     
     public static class LoginResponse {
@@ -338,6 +409,8 @@ public class Controller {
         public Long getTotalStudents() { return totalStudents; }
     }
 
+ // In Controller.java
+
     public static class UserExamResponse {
         private Long examId;
         private String examName;
@@ -346,9 +419,10 @@ public class Controller {
         private String duration;
         private String status;
         private Long registrationId;
+        private Double score; // <-- ADD THIS FIELD
 
         public UserExamResponse(Long examId, String examName, String subject, String date, 
-                              String duration, String status, Long registrationId) {
+                              String duration, String status, Long registrationId, Double score) { // <-- ADD score
             this.examId = examId;
             this.examName = examName;
             this.subject = subject;
@@ -356,6 +430,7 @@ public class Controller {
             this.duration = duration;
             this.status = status;
             this.registrationId = registrationId;
+            this.score = score; // <-- ADD THIS LINE
         }
 
         public Long getExamId() { return examId; }
@@ -365,6 +440,7 @@ public class Controller {
         public String getDuration() { return duration; }
         public String getStatus() { return status; }
         public Long getRegistrationId() { return registrationId; }
+        public Double getScore() { return score; } // <-- ADD THIS GETTER
     }
 
     public static class PaymentStatsResponse {
@@ -423,5 +499,19 @@ public class Controller {
         }
 
         public String getMessage() { return message; }
+    }
+ // Inside Controller.java
+    public static class PaymentRequest {
+        private Long examId;
+        private Double amount;
+        private String paymentMethod; // <-- ADD THIS LINE
+
+        // Getters and Setters
+        public Long getExamId() { return examId; }
+        public void setExamId(Long examId) { this.examId = examId; }
+        public Double getAmount() { return amount; }
+        public void setAmount(Double amount) { this.amount = amount; }
+        public String getPaymentMethod() { return paymentMethod; } // <-- ADD THIS GETTER
+        public void setPaymentMethod(String paymentMethod) { this.paymentMethod = paymentMethod; } // <-- ADD THIS SETTER
     }
 }

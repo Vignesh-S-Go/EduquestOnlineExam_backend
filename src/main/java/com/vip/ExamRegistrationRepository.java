@@ -5,11 +5,14 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 
 public interface ExamRegistrationRepository extends JpaRepository<ExamRegistration, Long> {
     List<ExamRegistration> findByUser(User user);
     List<ExamRegistration> findByExam(Exam exam);
     List<ExamRegistration> findByUserAndStatus(User user, String status);
+    Optional<ExamRegistration> findByIdAndUser(Long id, User user);
+    
     
     @Query("SELECT COUNT(er) FROM ExamRegistration er")
     Long countTotalRegistrations();

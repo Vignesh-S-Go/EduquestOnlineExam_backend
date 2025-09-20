@@ -16,11 +16,14 @@ public class PaymentService {
     @Autowired
     private ExamRepository examRepository;
     
-    public Payment createPayment(User user, Long examId, Double amount) {
+ // In PaymentService.java
+
+    public Payment createPayment(User user, Long examId, Double amount, String paymentMethod) { // <-- ADD the String parameter
         Optional<Exam> optionalExam = examRepository.findById(examId);
         if (optionalExam.isPresent()) {
             Payment payment = new Payment(user, optionalExam.get(), amount);
             payment.setTransactionId(UUID.randomUUID().toString());
+            payment.setPaymentMethod(paymentMethod); // <-- ADD this line to set the value
             return paymentRepository.save(payment);
         }
         return null;
